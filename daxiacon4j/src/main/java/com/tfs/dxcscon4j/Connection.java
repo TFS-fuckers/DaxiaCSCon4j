@@ -30,6 +30,10 @@ public class Connection {
     private Thread mainThread = null;
     /**请勿更改 服务器是否响应的触发器 */
     private boolean receiveTrigger = false;
+    /**是否已经完成验证尝试 */
+    private boolean vertifiedTried = false;
+    /**验证是否通过 */
+    private boolean vertified = false;
     /**对连接成功的监听器 */
     private Runnable connectListener;
     /**对连接断开的监听器 */
@@ -53,15 +57,21 @@ public class Connection {
      * @param vertificationUserInfo 用于验证的用户信息
      */
     public Connection(String host, int port, Vertification vertificationUserInfo){
-        DXSys.Logging.logInfo("Trying to connect to " + host + ":" + port);
         try {
             this.address = new InetSocketAddress(host, port);
             this.vertification = vertificationUserInfo;
-            mainThread = new Thread(() -> this.mainThread());
-            mainThread.start();
         } catch (Exception e) {
-            DXSys.Logging.logError("Connection failed: " + e.getMessage());
+            DXSys.Logging.logError("Build connection failed: " + e.getMessage());
         }
+    }
+    
+    /**
+     * 启用该连接
+     */
+    public void run() {
+        DXSys.Logging.logInfo("Trying to connect to " + this.address.getHostName() + ":" + this.address.getPort());
+        this.mainThread = new Thread(() -> this.mainThread());
+        this.mainThread.start();
     }
 
     /**
@@ -155,7 +165,6 @@ public class Connection {
         }
         DXSys.Logging.logInfo("Sent vertification pack to server");
         this.writer.println(new Datapack("UserInfo", this.vertification).toJson());
-        boolean vertified = false;
         String failCause = "No vertification feedback";
         for(int i = 0; i < VERTIFICATION_MAX_TRIES; i++) {
             try {
@@ -177,10 +186,12 @@ public class Connection {
             } catch (Exception e) {
                 DXSys.Logging.logError("Error while vertification");
                 this.killConnection();
+                this.vertifiedTried = true;
                 return;
             }
         }
-
+        this.vertifiedTried = true;
+        
         if(!vertified) {
             DXSys.Logging.logError("Vertification failed, cause: %s", failCause);
             this.killConnection();
@@ -281,7 +292,7 @@ public class Connection {
     }
 
     /**
-     * 与服务器的连接是否仍然已连接
+     * 与服务器的socket连接是否仍然已连接
      * @return 是否已连接
      */
     public boolean isConnected(){
@@ -326,5 +337,13 @@ public class Connection {
      */
     public void setOnDisconnected(Runnable listener) {
         this.disconnectListener = listener;
+    }
+
+    public boolean didTryVertification() {
+        return this.vertifiedTried;
+    }
+
+    public boolean vertificationBlocked() {
+        return this.vertifiedTried && !this.vertified;
     }
 }
