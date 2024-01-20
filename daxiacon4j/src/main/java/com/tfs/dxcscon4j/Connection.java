@@ -6,6 +6,8 @@ import java.io.InputStreamReader;
 import java.io.PrintWriter;
 import java.net.InetSocketAddress;
 import java.net.Socket;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.LinkedList;
 import java.util.Queue;
 import java.util.Timer;
@@ -38,6 +40,8 @@ public class Connection {
     private Runnable connectListener;
     /**对连接断开的监听器 */
     private Runnable disconnectListener;
+    /**延迟ms */
+    private int ping = 999;
 
     private PrintWriter writer;
     private BufferedReader reader;
@@ -245,9 +249,10 @@ public class Connection {
         if(this.reader.ready()){
             Datapack receive = Datapack.toDatapack(this.reader.readLine());
             this.receiveTrigger = true;
+            LocalDateTime receiveTime = LocalDateTime.now(ZoneId.of("UTC+8"));
+            this.ping = Math.min(2000, (receiveTime.getNano() - receive.sendTime.getNano()) / 1000000);
             if(receive.identifier.equals(Datapack.HEARTBEAT.identifier)){
                 this.sendMessage(Datapack.HEARTBEAT);
-                // DXSys.Logging.logInfo("responding server's heartbeat");
                 return;
             }
             synchronized(this.received) {
@@ -345,5 +350,9 @@ public class Connection {
 
     public boolean vertificationBlocked() {
         return this.vertifiedTried && !this.vertified;
+    }
+
+    public int getPing_ms() {
+        return this.ping;
     }
 }

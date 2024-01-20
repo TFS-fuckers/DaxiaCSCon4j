@@ -1,4 +1,8 @@
 package com.tfs.dxcscon4j.protocol;
+
+import java.time.LocalDateTime;
+import java.time.ZoneId;
+
 import com.google.gson.Gson;
 
 /**服务器数据包 */
@@ -11,7 +15,9 @@ public class Datapack {
     public String senderTag;
     /**数据包的主体内容 */
     public String content;
-    
+    /**数据包的发送时间 */
+    public LocalDateTime sendTime;
+
     /**
      * 从json文本生成数据包实例
      * @param rawJson json文本
@@ -67,6 +73,10 @@ public class Datapack {
      */
     public <T> T deserializeContent(Class<T> targetClass){
         return GSON.fromJson(this.content, targetClass);
+    }
+
+    public void refreshTime() {
+        this.sendTime = LocalDateTime.now(ZoneId.of("UTC+8"));
     }
 
     /**

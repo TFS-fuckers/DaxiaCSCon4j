@@ -210,6 +210,7 @@ public class ClientHandler{
     private void sendMessageTick() throws IOException {
         synchronized(this.toSend) {
             if(this.toSend.size() != 0) {
+                this.toSend.peek().refreshTime();
                 this.writer.println(this.toSend.remove().toJson());
             }
         }
